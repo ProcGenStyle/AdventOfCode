@@ -4,7 +4,7 @@ using Common;
 // Puzzle answers
 var safeReports = 0;
 var dampenedReports = 0;
-var itemRemoved = false;
+var levelRemovedSafe = false;
 
 // Read in each report
 var reports = FileParser.ReadAllLinesAsIntArrays("input.txt");
@@ -15,10 +15,14 @@ foreach (var report in reports)
     // Lists for determining safe reports
     var deltas = new List<int>();
     var dirs = new List<char>();
+    var listOfLists = new List<List<int>>();
+    var reportLength = report.Length;
 
     // Compute the difference and direction for each element
+    listOfLists.Add(report.ToList());
     for (int i = 1; i < report.Length; i++)
     {
+        listOfLists.Add(report.ToList());
         var delta = report[i] - report[i - 1];
         deltas.Add(Math.Abs(delta));
         dirs.Add(delta > 0 ? '+' : delta < 0 ? '-' : '0');
@@ -28,54 +32,32 @@ foreach (var report in reports)
     if (deltas.All(d => d <= 3 && d >= 1) && dirs.All(d => d == dirs[0]))
         safeReports += 1;
 
-    // Debug
-    Console.WriteLine($"{string.Join('\t', report)}");
-    Console.WriteLine($"\t{string.Join('\t', deltas)}");
-    Console.WriteLine($"\t{string.Join('\t', dirs)}");
+    // Remove one element from each list
+    for (var i = 0; i < reportLength; i++)
+        listOfLists[i].RemoveAt(i);
 
-    // Try removing one invalid level
-    for (int i = deltas.Count - 1; i >= 0; i--)
+    // Brute force check with one level removed
+    foreach (var newReport in listOfLists)
     {
-        if (deltas[i] > 3 || deltas[i] < 1)
+        var newDeltas = new List<int>();
+        var newDirs = new List<char>();
+        for (int i = 1; i < newReport.Count; i++)
         {
-            Console.WriteLine($"Removed {deltas[i]} {dirs[i]}");
-            deltas.RemoveAt(i);
-            dirs.RemoveAt(i);
-            itemRemoved = true;
-            break;
+            var delta = newReport[i] - newReport[i - 1];
+            newDeltas.Add(Math.Abs(delta));
+            newDirs.Add(delta > 0 ? '+' : delta < 0 ? '-' : '0');
         }
-    }
 
-    // Check to see if a dir needs to be removed
-    var tot = dirs.Count();
-    var plus = dirs.Count(c => c == '+');
-    var minus = dirs.Count(c => c == '-');
-    if (plus > minus && plus != tot && !itemRemoved)
-    {
-        var i = dirs.IndexOf('-');
-        Console.WriteLine($"Removed {deltas[i]} {dirs[i]}");
-        deltas.RemoveAt(i);
-        dirs.RemoveAt(i);
-    }
-    else if (minus > plus && minus != tot && !itemRemoved)
-    {
-        var i = dirs.IndexOf('+');
-        Console.WriteLine($"Removed {deltas[i]} {dirs[i]}");
-        deltas.RemoveAt(i);
-        dirs.RemoveAt(i);
+        if (newDeltas.All(d => d <= 3 && d >= 1) && (newDirs.All(d => d == '-') || newDirs.All(d => d == '+')))
+            levelRemovedSafe = true;
     }
 
     // Check again to see if this report is safe after removing a level
-    if (deltas.All(d => d <= 3 && d >= 1) && dirs.All(d => d == dirs[0]))
-    {
+    if (levelRemovedSafe)
         dampenedReports += 1;
-        Console.WriteLine("Safe");
-    }
-    else { Console.WriteLine("Unsafe"); }
-    Console.WriteLine();
 
     // Reset removed flag for next cycle
-    itemRemoved = false;
+    levelRemovedSafe = false;
 }
 
 // Print results
